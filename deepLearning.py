@@ -215,7 +215,15 @@ def train(features, targets, epochs, learnrate, graph_lines=False):
 
 
 
-# GRADIENT DESCENT CODE
+
+
+
+
+
+
+
+"""
+GRADIENT DESCENT CODE"""
 
 
 
@@ -257,3 +265,291 @@ error_term = error * output_grad
 del_w = [ learnrate * error_term * x[0],
           learnrate * error_term * x[1]]
 # or del_w = learnrate * error_term * x
+
+
+
+# Gradient Descent Alternate -- using average for error
+
+import numpy as np
+from data_prep import features, targets, features_test, targets_test
+
+
+def sigmoid(x):
+    """
+    Calculate sigmoid
+    """
+    return 1 / (1 + np.exp(-x))
+
+# TODO: We haven't provided the sigmoid_prime function like we did in
+#       the previous lesson to encourage you to come up with a more
+#       efficient solution. If you need a hint, check out the comments
+#       in solution.py from the previous lecture.
+
+# Use to same seed to make debugging easier
+np.random.seed(42)
+
+n_records, n_features = features.shape
+last_loss = None
+
+# Initialize weights
+weights = np.random.normal(scale=1 / n_features**.5, size=n_features)
+
+# Neural Network hyperparameters
+epochs = 1000
+learnrate = 0.5
+
+for e in range(epochs):
+    del_w = np.zeros(weights.shape)
+    for x, y in zip(features.values, targets):
+        # Loop through all records, x is the input, y is the target
+
+        # Activation of the output unit
+        #   Notice we multiply the inputs and the weights here 
+        #   rather than storing h as a separate variable 
+        output = sigmoid(np.dot(x, weights))
+
+        # The error, the target minus the network output
+        error = y - output
+
+        # The error term
+        #   Notice we calulate f'(h) here instead of defining a separate
+        #   sigmoid_prime function. This just makes it faster because we
+        #   can re-use the result of the sigmoid function stored in
+        #   the output variable
+        error_term = error * output * (1 - output)
+
+        # The gradient descent step, the error times the gradient times the inputs
+        del_w += error_term * x
+
+    # Update the weights here. The learning rate times the 
+    # change in weights, divided by the number of records to average
+    weights += learnrate * del_w / n_records
+
+    # Printing out the mean square error on the training set
+    if e % (epochs / 10) == 0:
+        out = sigmoid(np.dot(features, weights))
+        loss = np.mean((out - targets) ** 2)
+        if last_loss and last_loss < loss:
+            print("Train loss: ", loss, "  WARNING - Loss Increasing")
+        else:
+            print("Train loss: ", loss)
+        last_loss = loss
+
+
+# Calculate accuracy on test data
+tes_out = sigmoid(np.dot(features_test, weights))
+predictions = tes_out > 0.5
+accuracy = np.mean(predictions == targets_test)
+print("Prediction accuracy: {:.3f}".format(accuracy))
+
+
+
+
+
+
+
+
+""" MultiLayer Perceptron"""
+
+# Number of records and input units
+n_records, n_inputs = features.shape
+# Number of hidden units
+n_hidden = 2
+weights_input_to_hidden = np.random.normal(0, n_inputs**-0.5, size=(n_inputs, n_hidden))
+
+
+
+# Making a column Vector
+
+
+print(features)
+> array([ 0.49671415, -0.1382643 ,  0.64768854])
+
+print(features.T)
+> array([ 0.49671415, -0.1382643 ,  0.64768854])
+#Notice that the transpose kept it as a row vector
+
+#Use this below to make a column vector
+print(features[:, None])
+> array([[ 0.49671415],
+       [-0.1382643 ],
+       [ 0.64768854]])
+
+
+
+# ALTERNATIVELY
+
+np.array(features, ndmin=2)
+> array([[ 0.49671415, -0.1382643 ,  0.64768854]])
+
+np.array(features, ndmin=2).T
+> array([[ 0.49671415],
+       [-0.1382643 ],
+       [ 0.64768854]])
+
+
+
+
+hidden_error.shape == (3,) # row vector
+inputs.shape = (6,) # this will become a column vector
+#Can't multiply these together
+hidden_error*inputs
+#ValueError: operands could not be 
+# broadcast together with shapes (3,) (6,) 
+
+
+# Instead, we can do it this way, and numpy creates a matrix
+# With shape (len(column_vector), len(row_vector))
+hidden_error*inputs[:,None]
+array([[ -8.24195994e-04,  -2.71771975e-04,   1.29713395e-03],
+       [ -2.87777394e-04,  -9.48922722e-05,   4.52909055e-04],
+       [  6.44605731e-04,   2.12553536e-04,  -1.01449168e-03],
+       [  0.00000000e+00,   0.00000000e+00,  -0.00000000e+00],
+       [  0.00000000e+00,   0.00000000e+00,  -0.00000000e+00],
+       [  0.00000000e+00,   0.00000000e+00,  -0.00000000e+00]])
+
+
+
+
+
+
+""" BACKPROPAGATION """
+
+# Example from lecture
+
+import numpy as np
+
+
+def sigmoid(x):
+    """
+    Calculate sigmoid
+    """
+    return 1 / (1 + np.exp(-x))
+
+
+x = np.array([0.5, 0.1, -0.2])
+target = 0.6
+learnrate = 0.5
+
+weights_input_hidden = np.array([[0.5, -0.6],
+                                 [0.1, -0.2],
+                                 [0.1, 0.7]])
+
+weights_hidden_output = np.array([0.1, -0.3])
+
+## Forward pass
+hidden_layer_input = np.dot(x, weights_input_hidden)
+hidden_layer_output = sigmoid(hidden_layer_input)
+
+output_layer_in = np.dot(hidden_layer_output, weights_hidden_output)
+output = sigmoid(output_layer_in)
+
+## Backwards pass
+## TODO: Calculate output error
+error = target - output
+
+# TODO: Calculate error term for output layer
+output_error_term = error * output * (1 - output)
+
+# TODO: Calculate error term for hidden layer
+hidden_error_term = weights_hidden_output * output_error_term * hidden_layer_output * (1 - hidden_layer_output)
+
+# TODO: Calculate change in weights for hidden layer to output layer
+delta_w_h_o = learnrate * output_error_term * hidden_layer_output
+
+# TODO: Calculate change in weights for input layer to hidden layer
+delta_w_i_h = learnrate * hidden_error_term * x[: , None]
+
+print('Change in weights for hidden layer to output layer:')
+print(delta_w_h_o)
+print('Change in weights for input layer to hidden layer:')
+print(delta_w_i_h)
+
+
+
+
+
+
+
+# Example for e epochs
+
+import numpy as np
+from data_prep import features, targets, features_test, targets_test
+
+np.random.seed(21)
+
+def sigmoid(x):
+    """
+    Calculate sigmoid
+    """
+    return 1 / (1 + np.exp(-x))
+
+
+# Hyperparameters
+n_hidden = 2  # number of hidden units
+epochs = 900
+learnrate = 0.005
+
+n_records, n_features = features.shape
+last_loss = None
+# Initialize weights
+weights_input_hidden = np.random.normal(scale=1 / n_features ** .5,
+                                        size=(n_features, n_hidden))
+weights_hidden_output = np.random.normal(scale=1 / n_features ** .5,
+                                         size=n_hidden)
+
+for e in range(epochs):
+    del_w_input_hidden = np.zeros(weights_input_hidden.shape)
+    del_w_hidden_output = np.zeros(weights_hidden_output.shape)
+    for x, y in zip(features.values, targets):
+        ## Forward pass ##
+        # TODO: Calculate the output
+        hidden_input = np.dot(x, weights_input_hidden)
+        hidden_output = sigmoid(hidden_input)
+
+        output = sigmoid(np.dot(hidden_output,
+                                weights_hidden_output))
+
+        ## Backward pass ##
+        # TODO: Calculate the network's prediction error
+        error = y - output
+
+        # TODO: Calculate error term for the output unit
+        output_error_term = error * output * (1 - output)
+
+        ## propagate errors to hidden layer
+
+        # TODO: Calculate the hidden layer's contribution to the error
+        hidden_error = np.dot(output_error_term, weights_hidden_output)
+
+        # TODO: Calculate the error term for the hidden layer
+        hidden_error_term = hidden_error * hidden_output * (1 - hidden_output)
+
+        # TODO: Update the change in weights
+        del_w_hidden_output += output_error_term * hidden_output
+        del_w_input_hidden += hidden_error_term * x[:, None]
+
+    # TODO: Update weights
+    weights_input_hidden += learnrate * del_w_input_hidden / n_records
+    weights_hidden_output += learnrate * del_w_hidden_output / n_records
+
+    # Printing out the mean square error on the training set
+    if e % (epochs / 10) == 0:
+        hidden_output = sigmoid(np.dot(x, weights_input_hidden))
+        out = sigmoid(np.dot(hidden_output,
+                             weights_hidden_output))
+        loss = np.mean((out - targets) ** 2)
+
+        if last_loss and last_loss < loss:
+            print("Train loss: ", loss, "  WARNING - Loss Increasing")
+        else:
+            print("Train loss: ", loss)
+        last_loss = loss
+
+# Calculate accuracy on test data
+hidden = sigmoid(np.dot(features_test, weights_input_hidden))
+out = sigmoid(np.dot(hidden, weights_hidden_output))
+predictions = out > 0.5
+accuracy = np.mean(predictions == targets_test)
+print("Prediction accuracy: {:.3f}".format(accuracy))
+
