@@ -659,7 +659,11 @@ class SentimentNetwork:
             #       with raise an exception in Python. This allows us to ignore unknown
             #       words encountered in new reviews.
             if(word in self.word2index.keys()):
-                self.layer_0[0][self.word2index[word]] += 1
+                self.layer_0[0][self.word2index[word]] = 1
+                # The above was originally += 1 instead of = 1, but we realized that 
+                # we were using the count of words as inputs, which meant that if we
+                # had 27 '.' characters, then that 27 was super powerful for just a 
+                # period! So we make each of them worth 1, or 0 if not included.
                 
     def get_target_for_label(self,label):
         if(label == 'POSITIVE'):
